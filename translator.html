@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Localization Translator</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 2rem auto; line-height: 1.4; }
+    h1 { margin-bottom: 0.5rem; }
+    .row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 1rem 0; }
+    button { padding: 0.5rem 0.9rem; cursor: pointer; }
+    .muted { color: #555; }
+    #status { margin-top: 1rem; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>Localization Translator (German)</h1>
+  <p class="muted">Loads XML/CSV and translates only <code>ValTrnName</code> values.</p>
+  <div class="row">
+    <input id="fileInput" type="file" accept=".xml,.csv,text/xml,text/csv" />
+    <button id="translateBtn">Translate & Download</button>
+  </div>
+  <div id="status" aria-live="polite"></div>
+
+  <script>
+    const statusEl = document.getElementById("status");
+    const fileInput = document.getElementById("fileInput");
+    const translateBtn = document.getElementById("translateBtn");
+
+    const exactMap = new Map([
+      ["ok", "OK"], ["cancel", "Abbrechen"], ["close", "Schließen"], ["open", "Öffnen"],
+      ["save", "Speichern"], ["delete", "Löschen"], ["edit", "Bearbeiten"], ["yes", "Ja"],
+      ["no", "Nein"], ["apply", "Anwenden"], ["next", "Weiter"], ["back", "Zurück"],
+      ["finish", "Fertigstellen"], ["settings", "Einstellungen"], ["help", "Hilfe"],
+      ["error", "Fehler"], ["warning", "Warnung"], ["information", "Information"],
+      ["name", "Name"], ["description", "Beschreibung"], ["file", "Datei"], ["folder", "Ordner"],
+      ["menu", "Menü"], ["language", "Sprache"], ["user", "Benutzer"], ["password", "Passwort"],
+      ["login", "Anmelden"], ["logout", "Abmelden"], ["search", "Suchen"], ["add", "Hinzufügen"],
+      ["remove", "Entfernen"], ["loading", "Laden"], ["success", "Erfolg"], ["failed", "Fehlgeschlagen"]
+    ]);
+
+    function setStatus(message) {
+      statusEl.textContent = message;
+    }
+
+    function preserveCase(source, translated) {
+      if (source.toUpperCase() === source) return translated.toUpperCase();
+      if (source[0] && source[0].toUpperCase() === source[0] && source.slice(1).toLowerCase() === source.slice(1)) {
+        return translated[0] ? translated[0].toUpperCase() + translated.slice(1) : translated;
+      }
+      return translated;
+    }
+
+    function translateText(input) {
+      return input.replace(/[A-Za-zÄÖÜäöüß]+/g, (word) => {
+        const lower = word.toLowerCase();
+        if (!exactMap.has(lower)) return word;
+        return preserveCase(word, exactMap.get(lower));
+      });
+    }
+
+    function parseCsv(text) {
+      const rows = [];
+      let row = [];
+      let value = "";
+      let inQuotes = false;
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        const next = text[i + 1];
+        if (ch === '"' && inQuotes && next === '"') {
+          value += '"';
+          i++;
+        } else if (ch === '"') {
+          inQuotes = !inQuotes;
+        } else if (ch === "," && !inQuotes) {
+          row.push(value);
+          value = "";
+        } else if ((ch === "\n" || ch === "\r") && !inQuotes) {
+          if (ch === "\r" && next === "\n") i++;
+          row.push(value);
+          rows.push(row);
+          row = [];
+          value = "";
+        } else {
+          value += ch;
+        }
+      }
+      row.push(value);
+      if (row.length > 1 || row[0] !== "") rows.push(row);
+      return rows;
+    }
+
+    function toCsv(rows) {
+      const escape = (v) => {
+        const needsQuotes = /[",\n\r]/.test(v);
+        const escaped = v.replace(/"/g, '""');
+        return needsQuotes ? `"${escaped}"` : escaped;
+      };
+      return rows.map((r) => r.map((c) => escape(c ?? "")).join(",")).join("\n");
+    }
+
+    function translateCsv(text) {
+      const rows = parseCsv(text);
+      if (!rows.length) return text;
+      const header = rows[0];
+      const col = header.findIndex((h) => h.trim() === "ValTrnName");
+      if (col === -1) throw new Error('CSV missing "ValTrnName" column');
+      for (let i = 1; i < rows.length; i++) {
+        if (rows[i][col] != null) rows[i][col] = translateText(rows[i][col]);
+      }
+      return toCsv(rows);
+    }
+
+    function translateXml(text) {
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(text, "application/xml");
+      const parserError = xmlDoc.querySelector("parsererror");
+      if (parserError) throw new Error("Invalid XML file");
+
+      const allEls = xmlDoc.getElementsByTagName("*");
+      for (const el of allEls) {
+        if (el.hasAttribute("ValTrnName")) {
+          const original = el.getAttribute("ValTrnName");
+          el.setAttribute("ValTrnName", translateText(original));
+        }
+      }
+      return new XMLSerializer().serializeToString(xmlDoc);
+    }
+
+    function download(content, fileName, type) {
+      const blob = new Blob([content], { type });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const dot = fileName.lastIndexOf(".");
+      const name = dot > -1 ? fileName.slice(0, dot) : fileName;
+      const ext = dot > -1 ? fileName.slice(dot) : "";
+      a.download = `${name}.de${ext}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    translateBtn.addEventListener("click", async () => {
+      const file = fileInput.files?.[0];
+      if (!file) {
+        setStatus("Please load a file first.");
+        return;
+      }
+
+      try {
+        const text = await file.text();
+        const lower = file.name.toLowerCase();
+        let translated;
+        if (lower.endsWith(".xml")) {
+          translated = translateXml(text);
+          download(translated, file.name, "application/xml");
+        } else if (lower.endsWith(".csv")) {
+          translated = translateCsv(text);
+          download(translated, file.name, "text/csv");
+        } else {
+          throw new Error("Unsupported file type");
+        }
+        setStatus(`Translated and downloaded: ${file.name}`);
+      } catch (err) {
+        setStatus(`Translation failed: ${err.message}`);
+      }
+    });
+  </script>
+</body>
+</html>
