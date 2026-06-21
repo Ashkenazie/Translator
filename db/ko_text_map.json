@@ -21853,5 +21853,8 @@
   "Save Options ": "저장 옵션 ",
   "\\nAttach ": "\\n붙이기 ",
   "Delete: ": "삭제: ",
-  "Insert: ": "삽입: "
+  "Insert: ": "삽입: ",
+  "Printer $S1 was installed in $S2 ": "$S1 프린터가 $S2에 설치되었습니다 ",
+  "The file $S1 ": "파일 $S1 ",
+  "Description ": "노트"
 }
