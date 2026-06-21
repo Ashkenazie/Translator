@@ -21758,5 +21758,8 @@
   "Save Options ": "保存オプション ",
   "\\nAttach ": "\\n割当て ",
   "Delete: ": "削除: ",
-  "Insert: ": "挿入: "
+  "Insert: ": "挿入: ",
+  "Printer $S1 was installed in $S2 ": "プリンタ $S1 が $S2 にインストールされました ",
+  "The file $S1 ": "ファイル $S1 ",
+  "Description ": "備考 "
 }
