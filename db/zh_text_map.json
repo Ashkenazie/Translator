@@ -21773,5 +21773,8 @@
   "Save Options ": "保存选项 ",
   "\\nAttach ": "\\n附加 ",
   "Delete: ": "删除: ",
-  "Insert: ": "插入: "
+  "Insert: ": "插入: ",
+  "Printer $S1 was installed in $S2 ": "打印机 $S1已安装在 $S2 ",
+  "The file $S1 ": "文件 $S1 ",
+  "Description ": "描述 "
 }
