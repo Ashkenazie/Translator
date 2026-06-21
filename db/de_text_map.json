@@ -21189,5 +21189,8 @@
   "Save Options ": "Speicheroptionen ",
   "\\nAttach ": "\\nAnhängen ",
   "Delete: ": "Löschen: ",
-  "Insert: ": "Einfügen: "
+  "Insert: ": "Einfügen: ",
+  "Printer $S1 was installed in $S2 ": "Drucker $S1 wurde installiert in $S2 ",
+  "The file $S1 ": "Die Datei $S1 ",
+  "Description ": "Beschreibung"
 }
